@@ -37,6 +37,8 @@ OLD_DATA = "old_data"
 
 CONF_SUBSCRIPTION_ID = "subscription_id"
 EVENT_BUTTON = "smartthings.button"
+SIGNAL_SMARTTHINGS_UPDATE = "smartthings_update"
+
 
 BINARY_SENSOR_ATTRIBUTES_TO_CAPABILITIES: dict[str, str] = {
     Attribute.ACCELERATION: Capability.ACCELERATION_SENSOR,

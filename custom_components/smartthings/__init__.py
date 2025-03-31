@@ -9,6 +9,7 @@ from http import HTTPStatus
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
+
 from aiohttp import ClientResponseError
 from pysmartthings import (
     Attribute,
@@ -23,6 +24,7 @@ from pysmartthings import (
     SmartThingsConnectionError,
     SmartThingsSinkError,
     Status,
+    DeviceEntity,
 )
 
 from homeassistant.config_entries import ConfigEntry
@@ -47,6 +49,11 @@ from homeassistant.helpers.config_entry_oauth2_flow import (
     async_get_config_entry_implementation,
 )
 from homeassistant.helpers.entity_registry import RegistryEntry, async_migrate_entries
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.dispatcher import (
+    async_dispatcher_connect,
+    async_dispatcher_send,
+)
 
 from .const import (
     BINARY_SENSOR_ATTRIBUTES_TO_CAPABILITIES,
@@ -58,6 +65,7 @@ from .const import (
     MAIN,
     OLD_DATA,
     SENSOR_ATTRIBUTES_TO_CAPABILITIES,
+    SIGNAL_SMARTTHINGS_UPDATE
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -513,3 +521,62 @@ def process_component_status(status: ComponentStatus) -> None:
                     or not KEEP_CAPABILITY_QUIRK[capability](status[capability])
                 ):
                     del status[capability]
+class SmartThingsEntity(Entity):
+    """Defines a SmartThings entity."""
+
+    def __init__(self, device: DeviceEntity) -> None:
+        """Initialize the instance."""
+        self._device = device
+        self._dispatcher_remove = None
+
+    async def async_added_to_hass(self):
+        """Device added to hass."""
+
+        async def async_update_state(devices):
+            """Update device state."""
+            if self._device.device_id in devices:
+                await self.async_update_ha_state(True)
+
+        self._dispatcher_remove = async_dispatcher_connect(
+            self.hass, SIGNAL_SMARTTHINGS_UPDATE, async_update_state
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Disconnect the device when removed."""
+        if self._dispatcher_remove:
+            self._dispatcher_remove()
+
+    @property
+    def device_info(self):
+        """Get attributes about the device."""
+        if self._device.type == "OCF":
+            model = self._device.status.attributes[Attribute.mnmo].value
+            model = model.split("|")[0]
+            return {
+                "identifiers": {(DOMAIN, self._device.device_id)},
+                "name": self._device.label,
+                "model": model,
+                "manufacturer": self._device.status.attributes[Attribute.mnmn].value,
+                "sw_version": self._device.status.attributes[Attribute.mnfv].value,
+            }
+        return {
+            "identifiers": {(DOMAIN, self._device.device_id)},
+            "name": self._device.label,
+            "model": self._device.device_type_name,
+            "manufacturer": "Unavailable",
+        }
+
+    @property
+    def name(self) -> str:
+        """Return the name of the device."""
+        return self._device.label
+
+    @property
+    def should_poll(self) -> bool:
+        """No polling needed for this device."""
+        return False
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID."""
+        return self._device.device_id
