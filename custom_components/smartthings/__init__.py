@@ -24,8 +24,8 @@ from pysmartthings import (
     SmartThingsConnectionError,
     SmartThingsSinkError,
     Status,
-    DeviceEntity,
 )
+from pysmartthings.device import DeviceEntity
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -52,7 +52,6 @@ from homeassistant.helpers.entity_registry import RegistryEntry, async_migrate_e
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.dispatcher import (
     async_dispatcher_connect,
-    async_dispatcher_send,
 )
 
 from .const import (
