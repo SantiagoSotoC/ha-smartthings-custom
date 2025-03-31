@@ -25,7 +25,6 @@ from pysmartthings import (
     SmartThingsSinkError,
     Status,
 )
-from pysmartthings.device import DeviceEntity
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -523,7 +522,7 @@ def process_component_status(status: ComponentStatus) -> None:
 class SmartThingsEntity(Entity):
     """Defines a SmartThings entity."""
 
-    def __init__(self, device: DeviceEntity) -> None:
+    def __init__(self, device) -> None:
         """Initialize the instance."""
         self._device = device
         self._dispatcher_remove = None
